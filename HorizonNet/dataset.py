@@ -50,7 +50,8 @@ class PanoCorBonDataset(data.Dataset):
         # Read image
         img_path = os.path.join(self.img_dir,
                                 self.img_fnames[idx])
-        img = np.array(Image.open(img_path), np.float32)[..., :3] / 255.
+        # img = np.array(Image.open(img_path), np.float32)[..., :3] / 255.
+        img = np.array(Image.open(img_path))[..., :3] / 255.
         H, W = img.shape[:2]
 
         # Read ground truth corners
