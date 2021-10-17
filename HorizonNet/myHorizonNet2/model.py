@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
-
+from torchinfo import summary
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -172,6 +172,7 @@ def resnet50(pretrained=True, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']), strict=False)
+
     return model
 
 
@@ -242,6 +243,8 @@ class HorizonNet(nn.Module):
             ])
             self.step_cols = 4
             self.rnn_hidden_size = 512
+
+
             if self.use_rnn:
                 #self.bi_rnn = nn.LSTM(input_size=_exp * 256,
                 #                      hidden_size=self.rnn_hidden_size,
@@ -273,6 +276,8 @@ class HorizonNet(nn.Module):
                 self.linear[-1].bias.data[8::12].fill_(0.425)
             self.x_mean.requires_grad = False
             self.x_std.requires_grad = False
+
+
 
         def freeze_bn(self):
             for m in self.feature_extractor.modules():
@@ -317,3 +322,7 @@ class HorizonNet(nn.Module):
             bon = output[:, 1:]
 
             return bon, cor
+
+model = HorizonNet(backbone='resnet50', use_rnn=True)
+# (batch, channels, height, width)
+summary(model, (1, 3, 512, 1024))
