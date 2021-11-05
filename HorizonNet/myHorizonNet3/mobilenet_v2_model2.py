@@ -4,13 +4,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from torchinfo import summary
-
+import math
 from torch import nn
 
 
-def lr_pad(x, padding=1):
 
-    return torch.cat([x[..., -padding:], x, x[..., :padding]], dim=3)
+__all__ = ['MobileNetV2', 'mobilenet_v2']
+
+
+model_urls = {
+    'mobilenet_v2': 'https://www.dropbox.com/s/47tyzpofuuyyv1b/mobilenetv2_1.0-f2a8633.pth.tar?dl=1',
+}
+
+
+def lr_pad(x, padding=1):
+    return torch.cat([x[..., -padding:], x, x[..., :padding]], dim=0)
 
 class LR_PAD(nn.Module):
     def __init__(self, padding=1):
@@ -20,87 +28,150 @@ class LR_PAD(nn.Module):
         return lr_pad(x, self.padding)
 
 
-class SeparableConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, stride):
-        super(SeparableConv2d, self).__init__()
+# 첫번째 layer에서 사용될 convolution 함수
+def conv_bn(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
 
-        self.depthwise = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1, stride=stride),
-            nn.BatchNorm2d(in_channels),
-            nn.ReLU(inplace=True),
-        )
-        self.pointwise = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
+# inverted bottleneck layer 바로 다음에 나오는 convolution에 사용될 함수
+def conv_1x1_bn(inp, oup):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
+
+# channel수를 무조건 8로 나누어 떨어지게 만드는 함수
+def make_divisible(x, divisible_by=8):
+    import numpy as np
+    return int(np.ceil(x * 1. / divisible_by) * divisible_by)
+
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, oup, stride, expand_ratio):
+        super(InvertedResidual, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        hidden_dim = int(inp * expand_ratio)  # expansion channel
+        self.use_res_connect = self.stride == 1 and inp == oup  # skip connection이 가능한지 확인 True or False
+        '''
+            self.stride == 1 ----> 연산 전 후의 feature_map size가 같다는 의미
+            inp == oup ----> 채널수도 동일하게 유지된다는 의미
+            즉 skip connection 가능
+        '''
+        if expand_ratio == 1:
+            self.conv = nn.Sequential(
+                # dw
+                # 확장시킬 필요가 없기 때문에 바로 depth wise conv
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+        else:
+            self.conv = nn.Sequential(
+                # pw(확장)
+                nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear(축소)
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
 
     def forward(self, x):
-        x = self.depthwise(x)
-        x = self.pointwise(x)
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
+
+class MobileNetV2(nn.Module):
+    def __init__(self, n_class=1000, input_size=224, width_mult=1.):
+        super(MobileNetV2, self).__init__()
+        block = InvertedResidual
+        input_channel = 32
+        last_channel = 1280
+        interverted_residual_setting = [
+            # t, c, n, s
+            # t : expand ratio
+            # c : channel
+            # n : Number of iterations
+            # s : stride
+            [1, 16, 1, 1],
+            [6, 24, 2, 2],
+            [6, 32, 3, 2],
+            [6, 64, 4, 2],
+            [6, 96, 3, 1],
+            [6, 160, 3, 2],
+            [6, 320, 1, 1],
+        ]
+
+        # building first layer
+        assert input_size % 32 == 0
+        # input_channel = make_divisible(input_channel * width_mult)  # first channel is always 32!
+        self.last_channel = make_divisible(last_channel * width_mult) if width_mult > 1.0 else last_channel
+        self.features = [conv_bn(3, input_channel, 2)] # feature들을 담을 리스트에 first layer 추가
+
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))  # 반복되는 부분에서 skip connection 가능
+                input_channel = output_channel
+
+        # building last several layers
+        self.features.append(conv_1x1_bn(input_channel, self.last_channel))
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+
+        # Average pooling layer
+        self.avg = nn.AvgPool2d(7, 7)
+        # building classifier
+        self.classifier = nn.Linear(self.last_channel, n_class)
+
+        self._initialize_weights()
+
+    def forward(self, x):
+        # pdb.set_trace()
+        x = self.features(x)
+        x = self.avg(x)
+        x = x.view(-1, self.last_channel)
+        x = self.classifier(x)
         return x
 
-
-class MobileNetv1(nn.Module):
-    def __init__(self, num_classes=1000):
-        super(MobileNetv1, self).__init__()
-
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=2)
-        self.separable_conv2 = SeparableConv2d(32, 64, stride=1)
-        self.separable_conv3 = SeparableConv2d(64, 128, stride=2)
-        self.separable_conv4 = SeparableConv2d(128, 128, stride=1)
-        self.separable_conv5 = SeparableConv2d(128, 256, stride=2)
-        self.separable_conv6 = SeparableConv2d(256, 256, stride=1)
-        self.separable_conv7 = SeparableConv2d(256, 512, stride=2)
-        self.separable_conv8 = SeparableConv2d(512, 512, stride=1)
-        self.separable_conv9 = SeparableConv2d(512, 512, stride=1)
-        self.separable_conv10 = SeparableConv2d(512, 512, stride=1)
-        self.separable_conv11 = SeparableConv2d(512, 512, stride=1)
-        self.separable_conv12 = SeparableConv2d(512, 512, stride=1)
-        self.separable_conv13 = SeparableConv2d(512, 1024, stride=2)
-        self.separable_conv14 = SeparableConv2d(1024, 1024, stride=2)
-
-        #self.avgpool = nn.AvgPool2d(2)
-        #self.fc = nn.Linear(1024, num_classes)
-
+    # 초기 weight 설정
+    def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
                 if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
+                    m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
-
-        x = self.conv1(x)
-        x = self.separable_conv2(x)
-        x = self.separable_conv3(x)
-        x = self.separable_conv4(x)
-        x = self.separable_conv5(x)
-        x = self.separable_conv6(x)
-        x = self.separable_conv7(x)
-        x = self.separable_conv8(x)
-        x = self.separable_conv9(x)
-        x = self.separable_conv10(x)
-        x = self.separable_conv11(x)
-        x = self.separable_conv12(x)
-        x = self.separable_conv13(x)
-        x = self.separable_conv14(x)
-
-#        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
- #       print(x.size())
-#        x = self.fc(x)
- #       print(x.size())
-        return x
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
 
 
-def mobilenet_v1():
+
+def mobilenet_v2(pretrained=True, **kwargs):
     """
     Constructs a MobileNetV2 architecture from
     `"MobileNetV2: Inverted Residuals and Linear Bottlenecks" <https://arxiv.org/abs/1801.04381>`_.
@@ -109,15 +180,16 @@ def mobilenet_v1():
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = MobileNetv1()
+    model = MobileNetV2( **kwargs)
+    if pretrained:
 
+        model.load_state_dict(model_zoo.load_url(model_urls['mobilenet_v2']))
     return model
 
 class GlobalHeightConv(nn.Module):
     def __init__(self, in_c, out_c):
         super(GlobalHeightConv, self).__init__()
         self.layer = nn.Sequential(
-
             LR_PAD(),
             nn.Conv2d(in_c, in_c//2, kernel_size=3, stride=(2, 1), padding=(1, 0)),
             nn.BatchNorm2d(in_c//2),
@@ -137,6 +209,7 @@ class GlobalHeightConv(nn.Module):
         )
 
     def forward(self, x, out_w):
+
         x = self.layer(x)
         assert out_w % x.shape[3] == 0
         factor = out_w // x.shape[3]
@@ -154,8 +227,8 @@ class HorizonNet(nn.Module):
             super(HorizonNet, self).__init__()
             self.backbone = backbone
             self.use_rnn = use_rnn
-            if backbone == 'mobilenet_v1':
-                self.feature_extractor = mobilenet_v1()
+            if backbone == 'mobilenet_v2':
+                self.feature_extractor = mobilenet_v2(True)
                 _exp = 4
             else:
                 raise NotImplementedError()
@@ -167,12 +240,12 @@ class HorizonNet(nn.Module):
                 GlobalHeightConv(256 * _exp, int(256 * _exp / _out_scale)),
                 GlobalHeightConv(512 * _exp, int(512 * _exp / _out_scale)),
             ])
-            #print(self.stage1)
             self.step_cols = 4
             self.rnn_hidden_size = 512
 
 
             if self.use_rnn:
+
                 #self.bi_rnn = nn.LSTM(input_size=_exp * 256,
                 #                      hidden_size=self.rnn_hidden_size,
                 #                      num_layers=2,
@@ -188,7 +261,6 @@ class HorizonNet(nn.Module):
                 self.drop_out = nn.Dropout(0.5)
                 self.linear = nn.Linear(in_features=2 * self.rnn_hidden_size,
                                         out_features=3 * self.step_cols)
-
                 self.linear.bias.data[0::4].fill_(-1)
                 self.linear.bias.data[4::8].fill_(-0.478)
                 self.linear.bias.data[8::12].fill_(0.425)
@@ -220,17 +292,22 @@ class HorizonNet(nn.Module):
 
         def forward(self, x):
             x = self._prepare_x(x)
+
             iw = x.shape[3]
             block_w = int(iw / self.step_cols)
+
+            ### 여기 feature_extractor(x)에서 1000으로 바뀌기 시작한다...ㅠㅠㅠ
             conv_list = self.feature_extractor(x)
             down_list = []
 
             for x, f in zip(conv_list, self.stage1):
+                print(x.shape)
+
                 tmp = f(x, block_w)  # [b, c, h, w]
+
                 flat = tmp.view(tmp.shape[0], -1, tmp.shape[3])  # [b, c*h, w]
                 down_list.append(flat)
             feature = torch.cat(down_list, dim=1)  # [b, c*h, w]
-
 
             # rnn
             if self.use_rnn:
@@ -253,16 +330,6 @@ class HorizonNet(nn.Module):
 
             return bon, cor
 
-if __name__ == '__main__':
-    model = mobilenet_v1()
-    model = model.to("cuda:0")
-
-    summary(model, input_size=(1, 3, 512, 1024))
-
-
-    model2 = HorizonNet(backbone='mobilenet_v1', use_rnn=True)
-    model2 = model2.to("cuda:0")
-    summary(model2, input_size=(1, 3, 512, 1024))
-
+model = HorizonNet(backbone='mobilenet_v2', use_rnn=True)
 # (batch, channels, height, width)
-#summary(model)
+summary(model)

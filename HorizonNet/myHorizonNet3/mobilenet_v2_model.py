@@ -18,12 +18,6 @@ model_urls = {
 
 
 def lr_pad(x, padding=1):
-
-    #print(x)
-
-    #print(x.size())
-
-#    x=x.reshape(1,3,512, 1024)
     return torch.cat([x[..., -padding:], x, x[..., :padding]], dim=0)
 
 class LR_PAD(nn.Module):
@@ -70,31 +64,50 @@ class InvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None):
         super(InvertedResidual, self).__init__()
         self.stride = stride
+        # stride는 반드시 1 또는 2이어야 하므로 조건을 걸어 둡니다.
         assert stride in [1, 2]
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
 
+        # expansion factor를 이용하여 channel을 확장합니다.
         hidden_dim = int(round(inp * expand_ratio))
+        # stride가 1인 경우에만 residual block을 사용합니다.
+        # skip connection을 사용하는 경우 input과 output의 크기가 같아야 합니다.
         self.use_res_connect = self.stride == 1 and inp == oup
 
+        # Inverted Residual 연산
         layers = []
         if expand_ratio != 1:
-            # pw
+            # point-wise convolution
             layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
         layers.extend([
-            # dw
+            # depth-wise convolution
             ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
-            # pw-linear
-            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            norm_layer(oup),
+            # point-wise linear convolution
+            #nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            #norm_layer(oup),
+
         ])
+
+        ######################################
+        #print(layers)
         self.conv = nn.Sequential(*layers)
 
+
     def forward(self, x):
+        # use_res_connect인 경우만 connection을 연결합니다.
+        # use_res_connect : stride가 1이고 input과 output의 채널 수가 같은 경우 True
+
         if self.use_res_connect:
+            #print("1")
+            #print(x.size())
             return x + self.conv(x)
         else:
+            #print(self.conv(x).size())
+            #print("2")
+            #print(x.size())
+            #x = x.permute(3,2,1,0)
             return self.conv(x)
 
 
@@ -130,6 +143,10 @@ class MobileNetV2(nn.Module):
         input_channel = 32
         last_channel = 1280
 
+        # t : expansion factor
+        # c : output channel의 수
+        # n : 반복 횟수
+        # s : stride
         if inverted_residual_setting is None:
             inverted_residual_setting = [
                 # t, c, n, s
@@ -151,8 +168,12 @@ class MobileNetV2(nn.Module):
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)
         self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
         features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+
+        # Inverted Residual Block을 생성합니다.
+        # features에 feature들의 정보를 차례대로 저장합니다.
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
+            # width multiplier는 layer의 채널 수를 일정 비율로 줄이는 역할을 합니다.
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
@@ -185,13 +206,17 @@ class MobileNetV2(nn.Module):
     def _forward_impl(self, x):
         # This exists since TorchScript doesn't support inheritance, so the superclass method
         # (this one) needs to have a name other than `forward` that can be accessed in a subclass
+
         x = self.features(x)
+
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         x = self.classifier(x)
+
         return x
 
     def forward(self, x):
+
         return self._forward_impl(x)
 
 
@@ -206,7 +231,7 @@ def mobilenet_v2(pretrained=False, progress=True, **kwargs):
     """
     model = MobileNetV2(**kwargs)
     if pretrained:
-        #model.load_state_dict(model_zoo.load_url(model_urls['mobilenet_v2']), strict=False)
+
         model.load_state_dict(model_zoo.load_url(model_urls['mobilenet_v2']), strict=False)
     return model
 
@@ -233,8 +258,7 @@ class GlobalHeightConv(nn.Module):
         )
 
     def forward(self, x, out_w):
-        #print(x)
-        #print(x.size())
+
         x = self.layer(x)
         assert out_w % x.shape[3] == 0
         factor = out_w // x.shape[3]
@@ -252,8 +276,9 @@ class HorizonNet(nn.Module):
             super(HorizonNet, self).__init__()
             self.backbone = backbone
             self.use_rnn = use_rnn
-            if backbone == 'mobilenet':
-                self.feature_extractor = mobilenet_v2(True)
+            if backbone == 'mobilenet_v2':
+                self.feature_extractor = mobilenet_v2()
+                #print(self.feature_extractor)
                 _exp = 4
             else:
                 raise NotImplementedError()
@@ -268,8 +293,8 @@ class HorizonNet(nn.Module):
             self.step_cols = 4
             self.rnn_hidden_size = 512
 
-
             if self.use_rnn:
+
                 #self.bi_rnn = nn.LSTM(input_size=_exp * 256,
                 #                      hidden_size=self.rnn_hidden_size,
                 #                      num_layers=2,
@@ -301,8 +326,6 @@ class HorizonNet(nn.Module):
             self.x_mean.requires_grad = False
             self.x_std.requires_grad = False
 
-
-
         def freeze_bn(self):
             for m in self.feature_extractor.modules():
                 if isinstance(m, nn.BatchNorm2d):
@@ -321,12 +344,13 @@ class HorizonNet(nn.Module):
             block_w = int(iw / self.step_cols)
 
             ### 여기 feature_extractor(x)에서 1000으로 바뀌기 시작한다...ㅠㅠㅠ
+            print(x.size())
             conv_list = self.feature_extractor(x)
             down_list = []
-
+            #print(conv_list)
             for x, f in zip(conv_list, self.stage1):
-                print(x.size())
-                #rint(conv_list)
+            #    print(x.size())
+
                 tmp = f(x, block_w)  # [b, c, h, w]
 
                 flat = tmp.view(tmp.shape[0], -1, tmp.shape[3])  # [b, c*h, w]
@@ -354,6 +378,6 @@ class HorizonNet(nn.Module):
 
             return bon, cor
 
-model = HorizonNet(backbone='mobilenet', use_rnn=True)
+model = HorizonNet(backbone='mobilenet_v2', use_rnn=True)
 # (batch, channels, height, width)
-summary(model)
+#summary(model)
