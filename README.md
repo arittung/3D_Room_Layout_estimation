@@ -1,5 +1,7 @@
 # 파노라마 영상을 활용하는 3D 공간 복원 최적화 연구 (3D Room Layout Estimation Using a Single Panoramic Images)
 
+> -[sunset1995 연구](https://github.com/sunset1995) 참고
+
 <br>
 
 ### 목차
