@@ -53,7 +53,7 @@ for i_path in paths:
     print('Processing', i_path, flush=True)
 
     # Load and cat input images
-    img_ori = np.array(Image.open(i_path).resize((1024, 512), Image.BICUBIC))[..., :3]
+    img_ori = np.array(Image.open(i_path).resize((1024, 512), Image.Resampling.BICUBIC))[..., :3]
 
     # VP detection and line segment extraction
     _, vp, _, _, panoEdge, _, _ = panoEdgeDetection(img_ori,
