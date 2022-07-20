@@ -105,11 +105,13 @@ class ResNet(nn.Module):
     def __init__(self, block, layers):
         self.inplanes = 64
         super(ResNet, self).__init__()
+        # torch.nn.Conv2d( in_channels,out_channels,kernel_size,stride=1,padding=0)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=(3, 0),
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # block, planes, blocks
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
@@ -157,6 +159,7 @@ class ResNet(nn.Module):
         x = self.layer2(x); conv_list.append(x)
         x = self.layer3(x); conv_list.append(x)
         x = self.layer4(x); conv_list.append(x)
+        #print("conv_list: ", conv_list)
 
         return conv_list
 
@@ -254,7 +257,7 @@ class HorizonNet(nn.Module):
                 #                      bidirectional=True)
                 self.bi_rnn = nn.GRU(input_size=_exp * 256,
                                         hidden_size = self.rnn_hidden_size,
-                                        num_layers = 2,
+                                        num_layers = 3,
                                         dropout = 0.5,
                                         batch_first = False,
                                         bidirectional = True)

@@ -113,14 +113,14 @@ if __name__ == '__main__':
                                   shuffle=False, drop_last=False,
                                   num_workers=args.num_workers,
                                   pin_memory=not args.no_cuda)
-    # Create model
+    print("[*] Create model")
     if args.pth is not None:
         print('Finetune model is given.')
         print('Ignore --backbone and --no_rnn')
         net = load_trained_model(HorizonNet, args.pth).to(device)
     else:
         net = HorizonNet(args.backbone, not args.no_rnn).to(device)
-    # Create optimizer
+    print("[*] Create optimizer")
     if args.optim == 'SGD':
         optimizer = optim.SGD(
             net.parameters(),
@@ -131,17 +131,17 @@ if __name__ == '__main__':
             lr=args.lr, betas=(args.beta1, 0.999), weight_decay=args.weight_decay)
     else:
         raise NotImplementedError()
-    # Create tensorboard for monitoring training
+    print("[*] Create tensorboard for monitoring training")
     tb_path = os.path.join(args.logs, args.id)
     os.makedirs(tb_path, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=tb_path)
-    # Init variable
+    print("[*] Init variable")
     args.warmup_iters = args.warmup_epochs * len(loader_train)
     args.max_iters = args.epochs * len(loader_train)
     args.running_lr = args.warmup_lr if args.warmup_epochs > 0 else args.lr
     args.cur_iter = 0
     args.best_valid_loss = 1e9
-    # Start training
+    print("[*] Start training")
     for ith_epoch in trange(1, args.epochs + 1, desc='Epoch', unit='ep'):
 
         # Train phase
