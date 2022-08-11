@@ -34,6 +34,7 @@
 
 ## 2. 관련 연구
 ### 2-1. RoomNet
+- https://github.com/GitBoSun/roomnet
 - 방의 일부 이미지에서 레이아웃을 추정하는 작업.
 - end-to-end trainable encoder-decoder Network(RNN)를 통해 키포인트 집합을 추출하고, 획득한 keypoint를 특정 순서로 연결하여 방 레이아웃을 그림.
 
@@ -43,6 +44,7 @@
 <br>
 
 ### 2-2. LayoutNet
+- https://github.com/sunset1995/pytorch-layoutnet
 - 소실점을 기준으로 파노라마 이미지를 정렬한 후, 시스템은 심층네트워크를 사용하여 파노라마 이미지의 boundary와 corner map을 예측한 후 복구하는 작업.
 
 <img src="https://user-images.githubusercontent.com/53934639/159415332-ea394790-7d9b-4a43-84f1-eedf67c24742.png" style="width:500px">
@@ -50,6 +52,7 @@
 <br>
 
 ### 2-3. HorizonNet
+- https://github.com/sunset1995/HorizonNet
 - 입력으로 받은 파노라마 사진을 정렬한 후, ResNet50과 LSTM으로 훈련된 모델로 사진의 특징을 추출하여 천장-벽 경계, 바닥-벽 경계, 벽-벽 경계가 표시된 1D Layout을 도출한다. 
 
 - 그 후, Manhattan World 가정으로 바닥, 천장, 벽면을 복구한다.
@@ -59,6 +62,7 @@
 <br>
 
 ### 2-4. HoHoNet
+- https://github.com/sunset1995/HoHoNet
 - 레이아웃 재구성을 위한 새로운 방법을 설계하는 것이 아니라, 360 이미지에 대한 깊이 추정과 Semantic segmentation을 모델링하는 작업.
 
 <img src="https://user-images.githubusercontent.com/53934639/159415364-0692f720-3572-430a-aa58-a412588da865.png" style="width:300px">
@@ -67,6 +71,7 @@
 <br>
 
 ## 3. HorizonNet
+
 - Manhattan World 가정을 이용하여 일반적인 RGB 카메라로 촬영된 파노라마 사진 한 장으로 3D Room을 복원한다.
 
 ![image](https://user-images.githubusercontent.com/53934639/159415686-e886fe6a-9c5a-4aaa-9381-23117175fade.png)
