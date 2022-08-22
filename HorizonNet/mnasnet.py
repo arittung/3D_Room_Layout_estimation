@@ -57,17 +57,17 @@ class MnasNet(nn.Module):
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
             # t, c, n, s, k
-            [3, 128, 3, 2, 3],  
-            [3, 256, 3, 2, 5],  
-            [6, 512, 3, 2, 5],  
-            [6, 1024, 2, 1, 3],  
-            [6, 192, 4, 2, 5],  
-            [6, 320, 1, 1, 3],  
+            [3, 128, 2, 2, 3],
+            [3, 256, 2, 2, 5],
+            [6, 512, 2, 2, 5],
+            [6, 1024, 1, 1, 3],
+            [6, 36, 3, 3, 5],
+            [6, 24, 3, 2, 3],  
         ]
 
         assert input_size % 32 == 0
         input_channel = int(32 * width_mult)
-        self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
+        self.last_channel = int(128 * width_mult) if width_mult > 1.0 else 1280
 
         # building first two layer
         self.features1 = [Conv_3x3(3, input_channel, 2), SepConv_3x3(input_channel, 16)]
@@ -77,7 +77,7 @@ class MnasNet(nn.Module):
         # building inverted residual blocks (MBConv)
         output_channel = int(128 * width_mult)
         self.inverted_feature1 = []
-        for i in range(3):
+        for i in range(2):
             if i == 0:
                 self.inverted_feature1.append(InvertedResidual(input_channel, output_channel, 2, 3, 3))
             else:
@@ -87,7 +87,7 @@ class MnasNet(nn.Module):
 
         output_channel = int(256 * width_mult)
         self.inverted_feature2 = []
-        for i in range(3):
+        for i in range(2):
             if i == 0:  # s, t, k
                 self.inverted_feature2.append(InvertedResidual(input_channel, output_channel, 2, 3, 5))  # s, t, k
             else:
@@ -97,7 +97,7 @@ class MnasNet(nn.Module):
 
         output_channel = int(512 * width_mult)
         self.inverted_feature3 = []
-        for i in range(3):
+        for i in range(2):
             if i == 0:  # s, t, k
                 self.inverted_feature3.append(InvertedResidual(input_channel, output_channel, 2, 6, 5))  # s, t, k
             else:
@@ -107,7 +107,7 @@ class MnasNet(nn.Module):
 
         output_channel = int(1024 * width_mult)
         self.inverted_feature4 = []
-        for i in range(2):
+        for i in range(1):
             if i == 0:  # s, t, k
                 self.inverted_feature4.append(InvertedResidual(input_channel, output_channel, 1, 6, 3))  # s, t, k
             else:
@@ -115,9 +115,9 @@ class MnasNet(nn.Module):
             input_channel = output_channel
         self.inverted_feature4 = nn.Sequential(*self.inverted_feature4)
 
-        output_channel = int(192 * width_mult)
+        output_channel = int(36 * width_mult)
         self.inverted_feature5 = []
-        for i in range(4):
+        for i in range(3):
             if i == 0:  # s, t, k
                 self.inverted_feature5.append(InvertedResidual(input_channel, output_channel, 2, 6, 5))  # s, t, k
             else:
@@ -125,9 +125,9 @@ class MnasNet(nn.Module):
             input_channel = output_channel
         self.inverted_feature5 = nn.Sequential(*self.inverted_feature5)
 
-        output_channel = int(320 * width_mult)
+        output_channel = int(24 * width_mult)
         self.inverted_feature6 = []
-        for i in range(1):
+        for i in range(3):
             if i == 0:  # s, t, k
                 self.inverted_feature6.append(InvertedResidual(input_channel, output_channel, 1, 6, 3))  # s, t, k
             else:

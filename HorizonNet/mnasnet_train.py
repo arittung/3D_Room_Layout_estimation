@@ -35,7 +35,7 @@ def feed_forward(net, x, y_bon, y_cor):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--id', default='mydataset_mnasnet_time',
+    parser.add_argument('--id', default='new_resnet50+lstm',
                         help='experiment id to name checkpoints and logs')
     parser.add_argument('--ckpt', default='./ckpt',
                         help='folder to output checkpoints')
@@ -45,7 +45,7 @@ if __name__ == '__main__':
                         help='path to load saved checkpoint.'
                              '(finetuning)')
     # Model related
-    parser.add_argument('--backbone', default='mnasnet',
+    parser.add_argument('--backbone', default='resnet50',
                         choices=['resnet18', 'resnet50', 'resnet101', 'mnasnet'],
                         help='backbone of the network')
     parser.add_argument('--no_rnn', action='store_true',
@@ -168,11 +168,11 @@ if __name__ == '__main__':
     args.running_lr = args.warmup_lr if args.warmup_epochs > 0 else args.lr
     args.cur_iter = 0
     args.best_valid_score = 0
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
+    #start = torch.cuda.Event(enable_timing=True)
+    #end = torch.cuda.Event(enable_timing=True)
 
     print("[*] Start training")
-    start.record()
+    #start.record()
     for ith_epoch in trange(1, args.epochs + 1, desc='Epoch', unit='ep'):
 
         #print("[*] Train phase")
@@ -222,7 +222,7 @@ if __name__ == '__main__':
                         for n_corner in ['4', '6', '8', '10+', 'odd', 'overall']
                     ])
                     try:
-                        dt_cor_id = inference(net, x, device, force_raw=True)[0]
+                        dt_cor_id = inference(net, x, device, force_cuboid=False)[0]
                         dt_cor_id[:, 0] *= 1024
                         dt_cor_id[:, 1] *= 512
                     except:
@@ -258,8 +258,8 @@ if __name__ == '__main__':
                        os.path.join(args.ckpt, args.id, 'epoch_%d.pth' % ith_epoch),
                        args)
 
-        end.record()
-        torch.cuda.synchronize()
+        #end.record()
+        #torch.cuda.synchronize()
 
-        print("time: ", start.elapsed_time(end))
+        #print("time: ", start.elapsed_time(end))
 

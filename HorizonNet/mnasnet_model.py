@@ -209,7 +209,7 @@ class HorizonNet(nn.Module):
 
         # 1D prediction
         if self.use_rnn:
-            # mnasnet : 248
+            # mnasnet : 640
             # resnet : 1024
             self.bi_rnn = nn.GRU(input_size=640,
                                   hidden_size=self.rnn_hidden_size,
@@ -275,6 +275,13 @@ class HorizonNet(nn.Module):
 
         return bon, cor
 
-# from torchinfo import summary
-# model = HorizonNet('mnasnet', use_rnn=True)
+from torchinfo import summary
+from ptflops import get_model_complexity_info
+# device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# model = HorizonNet('resnet50', use_rnn=True).to(device)
+# macs, params = get_model_complexity_info(model, (3, 512, 1024), as_strings=True,
+#                                            print_per_layer_stat=True, verbose=True)
 # summary(model)
+# print(macs, params)
+# print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
+# print('{:<30}  {:<8}'.format('Number of parameters: ', params))
