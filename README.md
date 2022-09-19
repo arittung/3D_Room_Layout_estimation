@@ -1,4 +1,4 @@
-## 파노라마 영상을 활용하는 3D 공간 복원 최적화 연구 (3D Room Layout Estimation Using a Single Panoramic Images)
+## 단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화(A Study of Lightweight Deep Learning for Room Layout Estimation)
 
 *기존 연구: [sunset1995 연구](https://github.com/sunset1995)*
 
