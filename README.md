@@ -1,6 +1,6 @@
 ## 단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화(A Study of Lightweight Deep Learning for Room Layout Estimation)
 
-*기존 연구: [sunset1995 연구](https://github.com/sunset1995)*
+*기존 연구: [sunset1995 연구](https://github.com/sunset1995/HorizonNet)*
 
 
 
