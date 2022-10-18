@@ -2,7 +2,7 @@
 
 
 
-Paper: ["단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화"](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719)
+2022.10 KCI Paper: ["단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화"](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719)
 <br>
 *기존 연구: [sunset1995 연구](https://github.com/sunset1995/HorizonNet)*
 <br>
