@@ -1,10 +1,12 @@
-## 단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화<br>(Lightweight Deep Learning for Room Layout Estimation with a Single Panoramic Image)
+### 단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화<br>(Lightweight Deep Learning for Room Layout Estimation with a Single Panoramic Image)
 
 
 
-2022.10 KCI Paper: ["단일 파노라마 입력의 실내 공간 레이아웃 복원 모델 경량화"](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719)
+<b>Dayoung Kil and Seong-heum Kim</b> | [2022.10 KCI Paper](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719)
 <br>
-*기존 연구: [sunset1995 연구](https://github.com/sunset1995/HorizonNet)*
+
+<b>기존 연구</b> | [sunset1995 연구](https://github.com/sunset1995/HorizonNet)
+
 <br>
 
 ### 1. 연구 목적
