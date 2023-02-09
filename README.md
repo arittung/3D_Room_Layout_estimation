@@ -2,7 +2,7 @@
 
 
 
-<b>Dayoung Kil and Seong-heum Kim</b> | [2022.10 KCI Paper](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719), [ICCAS 2022 Paper](https://ieeexplore.ieee.org/document/10003901)
+<b>Dayoung Kil and Seong-heum Kim</b> | [2022.10 KCI Paper](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002884719), [2022 ICCAS Paper](https://ieeexplore.ieee.org/document/10003901)
 <br>
 
 <b>기존 연구</b> | [sunset1995 연구](https://github.com/sunset1995/HorizonNet)
