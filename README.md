@@ -67,7 +67,7 @@ The parameters used in the calculation have decreased by more than 1/2.
 At the same time, it was confirmed that there was no significant difference from the existing models in the performance measurement of 2D IOU, 3D IOU, MSE, Pixel error, and Corner error. <br>
 MnasNet has a great influence on lightweighting, and GRU has an impact on accuracy.
 
-연산 시 사용되는 Parameter가 약 1/2이상 감소함과 동시에, 2D IOU, 3D IOU, MSE, Pixel error, Corner error의 성능 측정에서 기존 모델과 큰 차이를 보이지 않았음을 확인하였다. 
+연산 시 사용되는 Parameter가 약 1/2이상 감소함과 동시에, 2D IOU, 3D IOU, MSE, Pixel error, Corner error의 성능 측정에서 기존 모델과 큰 차이를 보이지 않았음을 확인하였다. <br>
 MnasNet은 경량화에 큰 영향을 주고, GRU는 정확도에 영향을 준다.
 
 
