@@ -73,7 +73,7 @@ MnasNet은 경량화에 큰 영향을 주고, GRU는 정확도에 영향을 준�
 
 
 
-Test casese|ResNet50-LSTM|MnasNet-LSTM|*Our MnasNet-GRU
+Test cases|ResNet50-LSTM|MnasNet-LSTM|*Our MnasNet-GRU
 --|--|--|--
 #Parameter (Total) |81,570,348|40,397,700|37,641,092
 #FLOPs|71.83|59.19|58.48
